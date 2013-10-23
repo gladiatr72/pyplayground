@@ -1,0 +1,27 @@
+view "external" {
+	match-clients	{ any; 10.10.2.5; lawrence_public_external; production_public; };
+	match-destinations { 24.124.15.161; 24.124.15.160; 24.124.30.1; 24.124.30.2; 24.124.30.22; 127.0.0.1; };
+	recursion yes;
+	allow-recursion { 24.124.30.0/25; 127.0.0.1/32; };
+
+	zone "0/25.30.124.24.in-addr.arpa" IN {
+		type master;
+		file "master/external/24.124.30.inverse";
+		notify no;
+	};
+
+	zone "caltesting.org" {
+		type master;
+		file "master/external/caltesting.org_external.zone";
+		notify no;
+	};
+
+	zone "caltesting.net" {
+		type master;
+		file "master/external/caltesting.net_external.zone";
+		notify no;
+	};
+
+};
+
+
