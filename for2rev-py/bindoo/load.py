@@ -50,30 +50,24 @@ class load(object):
 
         return self.nconf_tree
 
-    @count_paren
     def _include(self):
         pass
 
-    @count_paren
     def _view(self):
         pass
 
-    @count_paren
     def _zone(self):
         pass
 
 
-    @count_paren
     def _open_close(self):
         pass
 
 
-    @count_paren
     def _stanz_jaws(self):
         pass
 
 
-    @count_paren
     def _simple_opt(self):
         pass
 
@@ -120,21 +114,18 @@ class load(object):
         try:
             fh=file(nconf)
             for line in iter(fh.readline,''):
-                collect={}
                 if not re.match(self.dud,line):
                     for test in self.repile:
                         res=re.match(test['regex'],line)
                         if res:
                             try:
-                                collect[test['func']].append(res.groups())
+                                col[test['func']].append( (res.groups(),fh.tell()) )
                             except KeyError:
-                                collect[test['func']] = [ res.groups() ]
+                                col[test['func']] = [ ( res.groups(), fh.tell() ) ]
+                            break
 
-                if collect:
-                   col.update(collect)
-
-                pp.pprint(self.collection)
         except IOError as e:
            print "I/O error({0}): {1}".format(e.errno,e.strerror)
 
+        pp.pprint(self.collection)
         self.deploy()
