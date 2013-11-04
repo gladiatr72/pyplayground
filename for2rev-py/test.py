@@ -2,7 +2,7 @@
 
 import bindoo
 
-A=bindoo.load('etc/named.conf')
+A=bindoo.Load('/home/sdspence/u/named/etc/named.conf')
 
 
 

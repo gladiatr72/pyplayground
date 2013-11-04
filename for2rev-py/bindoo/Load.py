@@ -2,9 +2,11 @@
 
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
 import pprint
 import re
-from count_paren import count_paren
+import os
+from CountParen import CountParen
 
 pp = pprint.PrettyPrinter(indent=4,width=20)
 
@@ -79,11 +81,6 @@ class Load(object):
 
     repile=[
         {
-            "name":"view",
-            "regex":
-            'func':_view
-        },
-        {
             "name":"zone",
             "regex":re.compile(r'^\s*zone\s+"(?P<zone>[\w.-]+)"\s+{.*'),
             'func':_zone
@@ -105,7 +102,7 @@ class Load(object):
         },
     ]
 
-    def open_nconf(self,filename='/etc/named.conf'):
+    def open_nconf(self,filename):
         """
         read_nconf(filename)
 
@@ -115,38 +112,55 @@ class Load(object):
         returns a the tuple (line, file position)
         """
 
-        fh = open('../' + filename)
+        confroot=""
 
-        for line in iter(fh.readline,''):
-            res = self.INCLUDE.match(line)
-            if not res:
-                yield line
-            else:
-                incfile = res.group('filename')
-                for line in open_nconf(filename=incflie):
+        try:
+            fh = open(filename)
+
+            for line in iter(fh.readline,''):
+                res = self.INCLUDE.match(line)
+                if not res:
                     yield line
+                else:
+                    incfile = res.group('filename')
+
+                    # derive the (actual) path of the named.conf directory
+                    # structure.  This is necessary to accomodate include
+                    # paths that do not follow the actual filesystem layout
+
+                    if not confroot:
+                        croot=self.confroot.split('/')
+                        iroot=incfile.split('/')
+
+                        rootlist=croot[:croot.index(croot[croot.index(iroot[1:-1][0])])]
+                        confroot='/'.join([ "%s" % el for el in rootlist])
+
+                    include=confroot + incfile
+                    print('***', include, '***')
+
+                    for line in self.open_nconf(filename=include):
+                        yield line
+
+        except IOError as e:
+           print("I/O error({0}): {1}".format(e.errno,e.strerror),filename)
 
 
     def __init__(self,filename='../etc/named.conf',current_depth=0):
         nconf=filename
         nct=self.nconf_tree
         col=self.collection
+        self.confroot=os.path.dirname(nconf)
 
-        try:
-            fh=open_nconf(filename=nconf)
-            for line in iter(fh.readline,''):
-                if not re.match(self.DUD,line):
-                    for test in self.repile:
-                        res=re.match(test['regex'],line)
-                        if res:
-                            try:
-                                col[test['func']].append( (res.groups(),fh.tell()) )
-                            except KeyError:
-                                col[test['func']] = [ ( res.groups(), fh.tell() ) ]
-                            break
-
-        except IOError as e:
-           print "I/O error({0}): {1}".format(e.errno,e.strerror)
+        for line in self.open_nconf(filename=nconf):
+            if not re.match(self.DUD,line):
+                for test in self.repile:
+                    res=re.match(test['regex'],line)
+                    if res:
+                        try:
+                            print(line)
+                        except KeyError:
+                            pass
+                        break
 
         pp.pprint(self.collection)
         self.deploy()
