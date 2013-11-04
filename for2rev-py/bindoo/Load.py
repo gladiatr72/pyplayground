@@ -32,13 +32,9 @@ class Load(object):
     nconf_tree={}
     collection={}
 
-
-
-
-
-    def deploy(self):
+    def deploy(self,line,depth):
         """
-        Process the lines marked for
+        Process the lines marked for ...
         """
 
         if self.current_depth != self.previous_depth:
@@ -47,61 +43,42 @@ class Load(object):
 
         nct=self.nconf_tree
 
-        pp.pprint(self.collection)
-
-
-    def puke(self):
-        pp = pprint.PrettyPrinter(indent=4,width=20)
-        pp.pprint(self.nconf_tree)
-
-        return self.nconf_tree
-
-    def _include(self):
-        pass
 
     def _view(self):
-        pass
+        return 'view'
 
     def _zone(self):
-        pass
-
-
-    def _open_close(self):
-        pass
-
-
-    def _stanz_jaws(self):
-        pass
-
-
-    def _simple_opt(self):
-        pass
+        return 'zone' 
 
 
     DUD=re.compile(r'(^\/\/|^\s*$|^#)')
     INCLUDE = re.compile(r'^\s*include\s"(?P<filename>.*)"\s*;')
-    VIEW = re.compile(r'\s*view\s"(?P<view>.*)"\s+{\s*')
 
     repile=[
+        {   
+            "name": "view",
+            "regex": re.compile(r'\s*view\s"(?P<view>.*)"\s+{\s*'),
+            "func": _view
+        },
         {
             "name":"zone",
             "regex":re.compile(r'^\s*zone\s+"(?P<zone>[\w.-]+)"\s+{.*'),
-            'func':_zone
+            'func': _zone
         },
         {
             "name":"open_close",
             "regex":re.compile(r'^\s*(.*)\s*{.*}\s*'),
-            'func':_open_close
+            'func': None
         },
         {
             "name":"stanz_jaws",
             "regex":re.compile(r'^\s*(.*)\s*([{}])\s*'),
-            'func':_stanz_jaws
+            'func': None
         },
         {
             "name":"simple_opt",
             "regex":re.compile(r'^\s*([^{}]+)\s+([^{}\s]+)[;\s]*$'),
-            'func':_simple_opt
+            'func': None
         },
     ]
 
@@ -116,14 +93,20 @@ class Load(object):
         """
 
         confroot=""
+        depth=0
 
         try:
             fh = open(filename)
+            print('open',filename)
 
             for line in iter(fh.readline,''):
                 res = self.INCLUDE.match(line)
+
+                depth+=len(re.findall(r'{',line))
+                depth-=len(re.findall(r'}',line))
+
                 if not res:
-                    yield line
+                    yield (line, depth)
                 else:
                     incfile = res.group('filename')
 
@@ -139,10 +122,9 @@ class Load(object):
                         confroot='/'.join([ "%s" % el for el in rootlist])
 
                     include=confroot + incfile
-                    print('***', include, '***')
 
-                    for line in self.open_nconf(filename=include):
-                        yield line
+                    for line, depth in self.open_nconf(filename=include):
+                        yield (line, depth)
 
         except IOError as e:
            print("I/O error({0}): {1}".format(e.errno,e.strerror),filename)
@@ -154,20 +136,9 @@ class Load(object):
         col=self.collection
         self.confroot=os.path.dirname(nconf)
 
-        for line in self.open_nconf(filename=nconf):
+        for ( line, depth ) in self.open_nconf(filename=nconf):
             if not re.match(self.DUD,line):
-                for test in self.repile:
-                    res=re.match(test['regex'],line)
-                    if res:
-                        try:
-                            print(line)
-                        except KeyError:
-                            pass
-                        break
-
-        pp.pprint(self.collection)
-        self.deploy()
-
+                self.deploy(line,depth)
 
 if __name__ == '__main__':
     pass

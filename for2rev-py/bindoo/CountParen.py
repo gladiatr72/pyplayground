@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
 
 
-    output=[ test(line) for line in file('../etc/named.conf') ]
+    output=[ test(line) for line in file('/home/sdspence/u/named/etc/named.conf') ]
 
 
 
