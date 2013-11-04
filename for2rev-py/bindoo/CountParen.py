@@ -2,7 +2,7 @@
 
 import re
 
-class count_paren(object):
+class CountParen(object):
     def __init__(self,func):
         self.open=0
         self.fopen=0
@@ -20,7 +20,7 @@ class count_paren(object):
 
 if __name__ == '__main__':
 
-    @count_paren
+    @CountParen
     def test(arg1,**args):
         """ """ 
         print args['depth'],

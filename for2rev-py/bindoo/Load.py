@@ -8,7 +8,7 @@ from count_paren import count_paren
 
 pp = pprint.PrettyPrinter(indent=4,width=20)
 
-class load(object):
+class Load(object):
     """
     The goal is to read a bind9 configuration into some sort of
     useful pythonic form
@@ -150,3 +150,8 @@ class load(object):
 
         pp.pprint(self.collection)
         self.deploy()
+
+
+if __name__ == '__main__':
+    pass
+
