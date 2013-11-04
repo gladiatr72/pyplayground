@@ -5,11 +5,11 @@
 import pprint
 import re
 from count_paren import count_paren
-   
+
 pp = pprint.PrettyPrinter(indent=4,width=20)
 
 class load(object):
-    """ 
+    """
     The goal is to read a bind9 configuration into some sort of
     useful pythonic form
     """
@@ -24,15 +24,16 @@ class load(object):
     current_depth=None
 
 
-    dud=re.compile(r'(^\/\/|^\s*$|^#)')
     nconf_tree={}
     collection={}
 
 
 
+
+
     def deploy(self):
-        """ 
-        Process the lines marked for 
+        """
+        Process the lines marked for
         """
 
         if self.current_depth != self.previous_depth:
@@ -42,7 +43,7 @@ class load(object):
         nct=self.nconf_tree
 
         pp.pprint(self.collection)
-        
+
 
     def puke(self):
         pp = pprint.PrettyPrinter(indent=4,width=20)
@@ -72,16 +73,14 @@ class load(object):
         pass
 
 
+    DUD=re.compile(r'(^\/\/|^\s*$|^#)')
+    INCLUDE = re.compile(r'^\s*include\s"(?P<filename>.*)"\s*;')
+    VIEW = re.compile(r'\s*view\s"(?P<view>.*)"\s+{\s*')
 
     repile=[
         {
-            "name":"include",
-            "regex":re.compile(r'^\s*include\s"(?P<filename>.*)"\s*;'),
-            "func":_include
-        },
-        {
             "name":"view",
-            "regex":re.compile(r'\s*view\s"(?P<view>.*)"\s+{\s*'),
+            "regex":
             'func':_view
         },
         {
@@ -106,15 +105,37 @@ class load(object):
         },
     ]
 
+    def open_nconf(self,filename='/etc/named.conf'):
+        """
+        read_nconf(filename)
+
+        generator to process BIND9 include directives and return a cohesive
+        series of lines
+
+        returns a the tuple (line, file position)
+        """
+
+        fh = open('../' + filename)
+
+        for line in iter(fh.readline,''):
+            res = self.INCLUDE.match(line)
+            if not res:
+                yield line
+            else:
+                incfile = res.group('filename')
+                for line in open_nconf(filename=incflie):
+                    yield line
+
+
     def __init__(self,filename='../etc/named.conf',current_depth=0):
-        nconf=filename 
+        nconf=filename
         nct=self.nconf_tree
         col=self.collection
 
         try:
-            fh=file(nconf)
+            fh=open_nconf(filename=nconf)
             for line in iter(fh.readline,''):
-                if not re.match(self.dud,line):
+                if not re.match(self.DUD,line):
                     for test in self.repile:
                         res=re.match(test['regex'],line)
                         if res:
