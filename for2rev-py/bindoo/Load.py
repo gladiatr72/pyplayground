@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+"""
+The goal is to read a bind9 configuration into some sort of
+useful pythonic form
+"""
 
 # -*- coding: utf-8 -*-
 
@@ -12,8 +16,7 @@ pp = pprint.PrettyPrinter(indent=4,width=20)
 
 class Load(object):
     """
-    The goal is to read a bind9 configuration into some sort of
-    useful pythonic form
+    bindoo.Load('/path/to/named.conf')
     """
 
     root=None
