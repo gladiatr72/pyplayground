@@ -29,7 +29,7 @@ class Load(object):
         self.sentinel_depth=depth
         #self.depth+=1
 
-        #print("View starts:",view," at depth ", self.depth)
+        print("View starts:",view," at depth ", self.depth)
         
 
         return view
@@ -66,14 +66,6 @@ class Load(object):
                     continue
 
                 res = self.INCLUDE.match(line)
-
-                self.depth+=len(re.findall(r'{',line))
-                self.depth-=len(re.findall(r'}',line))
-
-                if self.depth < self.sentinel_depth:  #and len(self.view) > 0:
-                    self.view.pop()
-
-
 
                 if not res:
                     yield (line, self.depth)
@@ -141,6 +133,12 @@ class Load(object):
         self.cfgen = self.open_nconf(filename=nconf)
 
         for ( line, depth ) in self.cfgen:
+            self.depth+=len(re.findall(r'{',line))
+            self.depth-=len(re.findall(r'}',line))
+
+            if self.depth < self.sentinel_depth:  #and len(self.view) > 0:
+                self.view.pop()
+
             self.deploy(line,depth)
 
 if __name__ == '__main__':
