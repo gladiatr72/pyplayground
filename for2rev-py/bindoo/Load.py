@@ -10,6 +10,7 @@ from __future__ import print_function
 import pprint
 import re
 import os
+import types
 from CountParen import CountParen
 
 pp = pprint.PrettyPrinter(indent=4,width=20)
@@ -19,68 +20,30 @@ class Load(object):
     bindoo.Load('/path/to/named.conf')
     """
 
-    root=None
 
-    """ number of open parenthese pairs """
-    open=None
+    def _view(self,payload, depth):
 
-    """ track paren depth through the configuration stream """
-    previous_depth=None
-    current_depth=None
+        view=payload[0]    
+        self.view.append(view)
+        self.sentinel_view=view
+        self.sentinel_depth=depth
+        #self.depth+=1
 
+        #print("View starts:",view," at depth ", self.depth)
+        
 
-    nconf_tree={}
-    collection={}
+        return view
 
-    def deploy(self,line,depth):
-        """
-        Process the lines marked for ...
-        """
+    def _zone(self,res,depth):
+        return 'zone'
 
-        if self.current_depth != self.previous_depth:
-            self.previous_depth=self.current_depth
-            self.current_depth=depth
-
-        nct=self.nconf_tree
-
-
-    def _view(self):
-        return 'view'
-
-    def _zone(self):
-        return 'zone' 
+    def _zone_oneline(self,res,depth):
+        return 'zone'
 
 
     DUD=re.compile(r'(^\/\/|^\s*$|^#)')
     INCLUDE = re.compile(r'^\s*include\s"(?P<filename>.*)"\s*;')
-
-    repile=[
-        {   
-            "name": "view",
-            "regex": re.compile(r'\s*view\s"(?P<view>.*)"\s+{\s*'),
-            "func": _view
-        },
-        {
-            "name":"zone",
-            "regex":re.compile(r'^\s*zone\s+"(?P<zone>[\w.-]+)"\s+{.*'),
-            'func': _zone
-        },
-        {
-            "name":"open_close",
-            "regex":re.compile(r'^\s*(.*)\s*{.*}\s*'),
-            'func': None
-        },
-        {
-            "name":"stanz_jaws",
-            "regex":re.compile(r'^\s*(.*)\s*([{}])\s*'),
-            'func': None
-        },
-        {
-            "name":"simple_opt",
-            "regex":re.compile(r'^\s*([^{}]+)\s+([^{}\s]+)[;\s]*$'),
-            'func': None
-        },
-    ]
+    VIEW=[ 'root' ]
 
     def open_nconf(self,filename):
         """
@@ -93,20 +56,27 @@ class Load(object):
         """
 
         confroot=""
-        depth=0
 
         try:
             fh = open(filename)
-            print('open',filename)
+            #print('open',filename)
 
-            for line in iter(fh.readline,''):
+            for line in fh:
+                if self.DUD.match(line):
+                    continue
+
                 res = self.INCLUDE.match(line)
 
-                depth+=len(re.findall(r'{',line))
-                depth-=len(re.findall(r'}',line))
+                self.depth+=len(re.findall(r'{',line))
+                self.depth-=len(re.findall(r'}',line))
+
+                if self.depth < self.sentinel_depth:  #and len(self.view) > 0:
+                    self.view.pop()
+
+
 
                 if not res:
-                    yield (line, depth)
+                    yield (line, self.depth)
                 else:
                     incfile = res.group('filename')
 
@@ -130,16 +100,48 @@ class Load(object):
            print("I/O error({0}): {1}".format(e.errno,e.strerror),filename)
 
 
+    def deploy(self,line,depth):
+       
+        for check in self.REPILE:
+            res=check['regex'].match(line)
+            if res and check['func']:
+                #print(res.groups())
+                check['func'](res.groups(),depth)
+                break
+
     def __init__(self,filename='../etc/named.conf',current_depth=0):
+
+        self.depth=0
+        self.sentinel_depth=0
+        self.sentinel_view="root"
+        self.view=[]
+
+        self.REPILE=[
+            {  
+                "name": "view",
+                "regex": re.compile(r'\s*view\s"(?P<view>.*)"\s+{\s*'),
+                "func": self._view
+            },
+            {
+                "name": "zone_oneline",
+                "regex": re.compile(r'^\s*zone\s+"(?P<zone>[\w.-]+)"\s+.*\sfile\s+"(?P<zoneflie>.*?)".*'),
+                "func": self._zone_oneline
+            },
+            {
+                "name":"zone",
+                "regex":re.compile(r'^\s*zone\s+"(?P<zone>[\w.-]+)"\s+{.*'),
+                'func': self._zone
+            },
+        ]
+
+
         nconf=filename
-        nct=self.nconf_tree
-        col=self.collection
         self.confroot=os.path.dirname(nconf)
 
-        for ( line, depth ) in self.open_nconf(filename=nconf):
-            if not re.match(self.DUD,line):
-                self.deploy(line,depth)
+        self.cfgen = self.open_nconf(filename=nconf)
+
+        for ( line, depth ) in self.cfgen:
+            self.deploy(line,depth)
 
 if __name__ == '__main__':
     pass
-
