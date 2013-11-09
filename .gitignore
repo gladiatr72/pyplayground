@@ -39,3 +39,5 @@ nosetests.xml
 .svn
 whee
 etc
+line
+zone_line.txt

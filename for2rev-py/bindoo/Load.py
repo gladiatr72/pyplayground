@@ -20,6 +20,11 @@ class Load(object):
     bindoo.Load('/path/to/named.conf')
     """
 
+    DUD=re.compile(r'(^\/\/|^\s*$|^#)')
+    INCLUDE = re.compile(r'^\s*include\s"(?P<filename>.*)"\s*;')
+    VIEW=[ 'root' ]
+
+
 
     def _view(self,payload, depth):
 
@@ -27,27 +32,38 @@ class Load(object):
         self.view.append(view)
         self.sentinel_view=view
         self.sentinel_depth=depth
-        #self.depth+=1
 
         print("View starts:",view," at depth ", self.depth)
-        
 
         return view
 
     def _zone(self,res,depth):
-        return 'zone'
 
-    def _zone_oneline(self,res,depth):
-        return 'zone'
+        # self.cfgen = self.open_nconf(filename=nconf)
+        zone=res[0]
+
+        sentinel = depth
 
 
-    DUD=re.compile(r'(^\/\/|^\s*$|^#)')
-    INCLUDE = re.compile(r'^\s*include\s"(?P<filename>.*)"\s*;')
-    VIEW=[ 'root' ]
+        for line,depth in stanza:
 
-    def open_nconf(self,filename):
+            self.depth+=len(re.findall(r'{',line))
+            self.depth-=len(re.findall(r'}',line))
+
+            print(line,depth,sentinel)
+            if depth >= sentinel:
+                break
+            
+            res=re.match(r'^.*file\s+"(.*)"\s*;\s*$',line)
+            print(type(res))
+
+            if res:
+                file=res.group(1)
+                pp.pprint(zone,file)
+
+    def open_nconf(self,*args,**kwargs):
         """
-        read_nconf(filename)
+        open_nconf(filename)
 
         generator to process BIND9 include directives and return a cohesive
         series of lines
@@ -58,7 +74,13 @@ class Load(object):
         confroot=""
 
         try:
-            fh = open(filename)
+            if 'filename' in kwargs:
+                filename=kwargs['filename']
+                fh = open(filename)
+                self.fh.append(fh)
+            else:
+                fh=self.fh[-1]
+
             #print('open',filename)
 
             for line in fh:
@@ -91,6 +113,9 @@ class Load(object):
         except IOError as e:
            print("I/O error({0}): {1}".format(e.errno,e.strerror),filename)
 
+        if type(filename) != types.FileType:
+            self.fh.pop()
+
 
     def deploy(self,line,depth):
        
@@ -98,7 +123,7 @@ class Load(object):
             res=check['regex'].match(line)
             if res and check['func']:
                 #print(res.groups())
-                check['func'](res.groups(),depth)
+                check['func'](res,depth)
                 break
 
     def __init__(self,filename='../etc/named.conf',current_depth=0):
@@ -107,17 +132,13 @@ class Load(object):
         self.sentinel_depth=0
         self.sentinel_view="root"
         self.view=[]
+        self.fh=[]
 
         self.REPILE=[
             {  
                 "name": "view",
                 "regex": re.compile(r'\s*view\s"(?P<view>.*)"\s+{\s*'),
                 "func": self._view
-            },
-            {
-                "name": "zone_oneline",
-                "regex": re.compile(r'^\s*zone\s+"(?P<zone>[\w.-]+)"\s+.*\sfile\s+"(?P<zoneflie>.*?)".*'),
-                "func": self._zone_oneline
             },
             {
                 "name":"zone",
@@ -132,14 +153,7 @@ class Load(object):
 
         self.cfgen = self.open_nconf(filename=nconf)
 
-        for ( line, depth ) in self.cfgen:
-            self.depth+=len(re.findall(r'{',line))
-            self.depth-=len(re.findall(r'}',line))
-
-            if self.depth < self.sentinel_depth:  #and len(self.view) > 0:
-                self.view.pop()
-
-            self.deploy(line,depth)
+        h
 
 if __name__ == '__main__':
     pass
