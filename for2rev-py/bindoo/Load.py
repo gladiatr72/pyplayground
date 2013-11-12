@@ -61,6 +61,20 @@ class Load(object):
                 file=res.group(1)
                 pp.pprint(zone,file)
 
+	def expand_chroot(include):
+		"""
+		 derive the (actual) path of the named.conf directory
+		 structure.  This is necessary to accomodate include
+		 paths that do not follow the actual filesystem layout
+		"""
+
+		croot=self.confroot.split('/')
+		iroot=include.split('/')
+
+		rootlist=croot[:croot.index(croot[croot.index(iroot[1:-1][0])])]
+
+		return '/'.join([ "%s" % el for el in rootlist])
+
     def open_nconf(self,*args,**kwargs):
         """
         open_nconf(filename)
@@ -94,16 +108,8 @@ class Load(object):
                 else:
                     incfile = res.group('filename')
 
-                    # derive the (actual) path of the named.conf directory
-                    # structure.  This is necessary to accomodate include
-                    # paths that do not follow the actual filesystem layout
-
                     if not confroot:
-                        croot=self.confroot.split('/')
-                        iroot=incfile.split('/')
-
-                        rootlist=croot[:croot.index(croot[croot.index(iroot[1:-1][0])])]
-                        confroot='/'.join([ "%s" % el for el in rootlist])
+						confroot=chroot_expand(incfile)
 
                     include=confroot + incfile
 
@@ -125,6 +131,15 @@ class Load(object):
                 #print(res.groups())
                 check['func'](res,depth)
                 break
+
+	def open_bystanza(handle):
+		if type(file) == types.StringTypes:
+			nconf=open_nconf(handle)
+		if type(file) == types.GeneratorType:
+			nconf=handle
+
+
+
 
     def __init__(self,filename='../etc/named.conf',current_depth=0):
 
@@ -151,9 +166,8 @@ class Load(object):
         nconf=filename
         self.confroot=os.path.dirname(nconf)
 
-        self.cfgen = self.open_nconf(filename=nconf)
-
-        h
+        self.cfgen = self.open_bystanza(filename=nconf)
+		#self.cfgen = self.open_nconf(filename=nconf)
 
 if __name__ == '__main__':
     pass
