@@ -11,6 +11,21 @@ pp=pprint.PrettyPrinter(indent=4, width=40)
 debug=False
 
 def walktree(target,search):
+    """
+    This is an excersize to explore filesystem walking in python.  It takes
+    two arguments: target root directory and an optional search term (regex)
+
+    Notes:
+
+    The most significant bits of the node mode returned by (l)stat are as 
+    follows:
+    
+    b100 - file
+    b010 - directory
+    b001 - symlink (eg: b101 indicates a symlink to a file)
+
+    """
+
 
     if search:
         res=re.compile(search)
